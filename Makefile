@@ -20,7 +20,9 @@ ifeq ($(GCC_VER_49),1)
 EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
 endif
 
-EXTRA_CFLAGS += -I$(src)/include
+export TopDIR ?= $(shell pwd)
+
+EXTRA_CFLAGS += -I$(TopDIR)/include
 
 EXTRA_LDFLAGS += --strip-debug
 
@@ -165,8 +167,6 @@ CONFIG_PLATFORM_ARM_RK3399 = n
 ########### CUSTOMER ################################
 
 CONFIG_DRVEXT_MODULE = n
-
-export TopDIR ?= $(shell pwd)
 
 ########### COMMON  #################################
 ifeq ($(CONFIG_GSPI_HCI), y)
@@ -586,7 +586,7 @@ endif
 include $(wildcard $(DRV_PATH)/platform/*.mk)
 
 # Import platform specific compile options
-EXTRA_CFLAGS += -I$(src)/platform
+EXTRA_CFLAGS += -I$(TopDIR)/platform
 #_PLATFORM_FILES := platform/platform_ops.o
 OBJS += $(_PLATFORM_FILES)
 
@@ -596,9 +596,8 @@ ifneq ($(USER_MODULE_NAME),)
 MODULE_NAME := $(USER_MODULE_NAME)
 endif
 
-ifneq ($(KERNELRELEASE),)
 ########### COMMON #################################
-include $(src)/common.mk
+include $(TopDIR)/common.mk
 
 EXTRA_CFLAGS += -DPHL_PLATFORM_LINUX
 EXTRA_CFLAGS += -DCONFIG_PHL_ARCH
@@ -619,18 +618,32 @@ ifeq ($(DIRTY_FOR_WORK), y)
 EXTRA_CFLAGS += -DDIRTY_FOR_WORK
 endif
 
-include $(src)/phl/phl.mk
+include $(TopDIR)/phl/phl.mk
 
 
 obj-$(CONFIG_RTL8852BE) := $(MODULE_NAME).o
 obj-$(CPTCFG_RTL8852AE) := $(MODULE_NAME).o
 $(MODULE_NAME)-y = $(OBJS)
 
-else
-
 export CONFIG_RTL8852BE = m
 
-all: modules
+KVERSION ?= $(shell uname -r)
+KVER_MAJOR := $(shell echo $(KVER) | cut -d. -f1)
+KVER_MINOR := $(shell echo $(KVER) | cut -d. -f2)
+
+all: check_version modules
+
+check_version:
+ifeq ($(KVER_MAJOR),)
+	$(error KVER is not set or has invalid format. It should be like '5.18')
+endif
+ifeq ($(shell [ $(KVER_MAJOR) -gt 5 ] || { [ $(KVER_MAJOR) -eq 5 ] && [ $(KVER_MINOR) -ge 18 ]; } && echo 1), 1)
+	@echo "Kernel version is 5.18 or above, apply patches/highver.patch"
+	# unimplement
+else
+	@echo "Kernel version is below 5.18, apply patches/lowver.patch"
+	# unimplement
+endif
 
 modules:
 	#rm -f .symvers.$(MODULE_NAME)
@@ -689,7 +702,7 @@ config_r:
 	/bin/bash script/Configure script/config.in
 
 
-.PHONY: modules clean
+.PHONY: modules clean check_version
 
 clean:
 	#$(MAKE) -C $(KSRC) M=$(shell pwd) clean
@@ -707,5 +720,3 @@ clean:
 	rm -fr Module.symvers ; rm -fr Module.markers ; rm -fr modules.order
 	rm -fr *.mod.c *.mod *.o .*.cmd *.ko *~
 	rm -fr .tmp_versions
-endif
-
