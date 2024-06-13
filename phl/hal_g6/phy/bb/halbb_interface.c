@@ -180,8 +180,10 @@ void halbb_set_reg_cmn(struct bb_info *bb, u32 addr, u32 mask, u32 val, enum phl
 	if (mask != MASKDWORD) {
 		shift = halbb_cal_bit_shift(mask);
 		
+		u32 val_shift = (shift == 32U)?0U:(val << shift); 
+
 		ori_val = halbb_get_32(bb, addr);
-		val_mod = ((ori_val) & (~mask)) | (((val << shift)) & mask);
+		val_mod = ((ori_val) & (~mask)) | (((val_shift)) & mask);
 	}
 
 	halbb_set_cr(bb, addr, val_mod);
@@ -232,7 +234,11 @@ u32 halbb_get_reg_cmn(struct bb_info *bb, u32 addr, u32 mask, enum phl_phy_idx p
 		addr += halbb_phy0_to_phy1_ofst(bb, addr);
 	#endif
 
-	val_0 = (halbb_get_cr(bb, addr) & mask) >> halbb_cal_bit_shift(mask);
+	u32 bit_shifts = halbb_cal_bit_shift(mask);
+	u32 masked = halbb_get_cr(bb, addr) & mask; 
+	// According to ISO/IEC 9899:2018 6.5.7 Bitwise shift operations, if the right operand's value is greater or equal to the width of the left operand, the behavior is undefined.
+	if (bit_shifts == 32U) {return 0U;}
+	val_0 = masked >> bit_shifts;
 
 	return val_0;
 }
