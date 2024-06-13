@@ -638,11 +638,9 @@ ifeq ($(KVER_MAJOR),)
 	$(error KVER is not set or has invalid format. It should be like '5.18')
 endif
 ifeq ($(shell [ $(KVER_MAJOR) -gt 5 ] || { [ $(KVER_MAJOR) -eq 5 ] && [ $(KVER_MINOR) -ge 18 ]; } && echo 1), 1)
-	@echo "Kernel version is 5.18 or above, apply patches/highver.patch"
-	# unimplement
+	@echo "Kernel version is 5.18 or above"
 else
-	@echo "Kernel version is below 5.18, apply patches/lowver.patch"
-	# unimplement
+	@echo "Kernel version is below 5.18"
 endif
 
 modules:
